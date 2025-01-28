@@ -19,7 +19,7 @@
 #define LIS3DH_CS 10
 
 // mac addres of the esp display
-uint8_t broadcastAddress[] = {0x24, 0xDC, 0xC3, 0x45, 0xF2, 0xBC};
+uint8_t broadcastAddress[] = { 0x24, 0xDC, 0xC3, 0x45, 0xF2, 0xBC };
 
 // software SPI
 //Adafruit_LIS3DH lis = Adafruit_LIS3DH(LIS3DH_CS, LIS3DH_MOSI, LIS3DH_MISO, LIS3DH_CLK);
@@ -66,7 +66,7 @@ void readMacAddress() {
     //               baseMac[0], baseMac[1], baseMac[2],
     //               baseMac[3], baseMac[4], baseMac[5]);
 
-    
+
   } else {
     Serial.println("Failed to read MAC address");
   }
@@ -89,14 +89,18 @@ void setup(void) {
 
   Serial.println("LIS3DH test!");
 
-  Wire.begin(21, 22); //declaring the sda and scl pins
+  Wire.begin(21, 22);      //declaring the sda and scl pins
   if (!lis.begin(0x19)) {  // i2c address
-    Serial.println("Couldn't start");
-    while (1) yield();
+    Serial.println("Couldn't start. Retrying...");
+    delay(100);
+    if (!lis.begin(0x19)) {
+      Serial.println("Failed to initialize LIS3DH. Check wiring.");
+      while (1) yield();
+    }
   }
   Serial.println("LIS3DH found!");
 
-  // lis.setRange(LIS3DH_RANGE_4_G);   // 2, 4, 8 or 16 G!
+  lis.setRange(LIS3DH_RANGE_4_G);  // 2, 4, 8 or 16 G!
 
   Serial.print("Range = ");
   Serial.print(2 << lis.getRange());
@@ -110,7 +114,7 @@ void setup(void) {
     case LIS3DH_MODE_HIGH_RESOLUTION: Serial.println("High Resolution 12bit"); break;
   }
 
-  // lis.setDataRate(LIS3DH_DATARATE_50_HZ);
+  lis.setDataRate(LIS3DH_DATARATE_10_HZ);
   Serial.print("Data rate set to: ");
   switch (lis.getDataRate()) {
     case LIS3DH_DATARATE_1_HZ: Serial.println("1 Hz"); break;
@@ -129,11 +133,11 @@ void setup(void) {
   // Set device as a Wi-Fi Station
 
   // Init ESP-NOW
-  WiFi.mode(WIFI_STA); // Set ESP32 to Station mode
+  WiFi.mode(WIFI_STA);  // Set ESP32 to Station mode
   if (esp_now_init() != ESP_OK) {
     Serial.println("Error initializing ESP-NOW");
     return;
-  }else{
+  } else {
     Serial.print("it s ok");
   }
 
@@ -160,13 +164,16 @@ void loop() {
   sensors_event_t event;
   lis.getEvent(&event);
 
-  // debug only
-  if (event.acceleration.x > 9) {
-    Serial.print("sunt awake, no eepy ");
-    Serial.print(event.acceleration.x);
-  } else if (event.acceleration.x < 1) {
-    Serial.print("eepy time ");
-    Serial.print(event.acceleration.x);
+  Serial.print("\t\tX: "); Serial.print(event.acceleration.x);
+  Serial.print(" \tY: "); Serial.print(event.acceleration.y);
+  Serial.print(" \tZ: "); Serial.print(event.acceleration.z);
+  Serial.println(" m/s^2 ");
+
+  Serial.println();
+
+  if (event.acceleration.x == 0.0 && event.acceleration.y == 0.0 && event.acceleration.z == 0.0) {
+    Serial.println("Invalid data. Reinitializing sensor...");
+    lis.begin(0x19);
   }
 
   //Set values to send
@@ -176,14 +183,6 @@ void loop() {
 
   // Send message via ESP-NOW
   esp_err_t result = esp_now_send(broadcastAddress, (uint8_t *)&AccReadings, sizeof(AccReadings));
-
-  if (result == ESP_OK) {
-    Serial.println("Sent with success");
-  } else {
-    Serial.println("Error sending the data");
-  }
-
-  Serial.println();
 
   delay(200);
 }

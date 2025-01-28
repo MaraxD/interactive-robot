@@ -39,14 +39,14 @@ XPT2046_Touchscreen touchscreen(XPT2046_CS, XPT2046_IRQ);
 #define SCREEN_HEIGHT 240
 #define FONT_SIZE 2
 
+#define LDR_PIN 34 // light sensor
+
 // Touchscreen coordinates: (x, y) and pressure (z)
 int x, y, z, eyeMoves, pupilX, pupilY, tick;
 int startAngle, endAngle;
 
 // Define variables to store incoming readings
-float incomingX;
-float incomingY;
-float incomingZ;
+float incomingX, incomingY, incomingZ, currentY = 0;
 
 // mac addres of the esp w/acc
 uint8_t broadcastAddress[] = { 0xD8, 0x3B, 0xDA, 0x99, 0x61, 0xAC };
@@ -67,19 +67,17 @@ esp_now_peer_info_t peerInfo;
 
 enum faceExpressions {
   NEUTRAL,
-  HAPPY,
   ANGRY,
-  POKER,
+  POKER, 
   DISTRESS,
   HURT,
   EEPY
 };
+faceExpressions state;
 
 // Callback when data is received
 void OnDataRecv(const uint8_t* mac, const uint8_t* incomingData, int len) {
   memcpy(&incomingReadings, incomingData, sizeof(incomingReadings));
-  Serial.print("Bytes received: ");
-  Serial.println(len);
   incomingX = incomingReadings.x;
   incomingY = incomingReadings.y;
   incomingZ = incomingReadings.z;
@@ -132,8 +130,26 @@ void printTouchToDisplay(int touchX, int touchY, int touchZ) {
 void drawFace(faceExpressions expression) {
 
   // if it s neutral, animate the eyes
-  if (expression == NEUTRAL && tick == 10) {
+  if (expression == NEUTRAL) {
     // TODO refactor
+    pupilX = 60;
+    pupilY = 20;
+    // pupilX += 10;
+    // pupilY += 10;
+    //eyes
+    tft.drawEllipse(SCREEN_WIDTH / 2 - 60, SCREEN_HEIGHT / 2 - 20, 40, 40, TFT_WHITE);
+    tft.fillEllipse(SCREEN_WIDTH / 2 - pupilX, SCREEN_HEIGHT / 2 - pupilY, 25, 25, TFT_WHITE);
+
+    // pupilX -= 20;
+    tft.drawEllipse(SCREEN_WIDTH / 2 + 60, SCREEN_HEIGHT / 2 - 20, 40, 40, TFT_WHITE);
+    tft.fillEllipse(SCREEN_WIDTH / 2 + pupilX, SCREEN_HEIGHT / 2 - pupilY, 25, 25, TFT_WHITE);
+
+    //mouth
+    tft.drawArc(SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2 + 40, 15, 20, 270, 90, TFT_WHITE, TFT_WHITE);
+    delay(800);
+
+    //looking to one side
+    tft.fillScreen(TFT_BLACK);
     pupilX += 10;
     pupilY += 10;
     //eyes
@@ -144,10 +160,50 @@ void drawFace(faceExpressions expression) {
     tft.drawEllipse(SCREEN_WIDTH / 2 + 60, SCREEN_HEIGHT / 2 - 20, 40, 40, TFT_WHITE);
     tft.fillEllipse(SCREEN_WIDTH / 2 + pupilX, SCREEN_HEIGHT / 2 - pupilY, 25, 25, TFT_WHITE);
 
-    tick = 0;
+    //mouth
+    tft.drawArc(SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2 + 40, 15, 20, 270, 90, TFT_WHITE, TFT_WHITE);
+    delay(300);
+
+    // looking to the other side
+    pupilX = 60;
+    pupilY = 20;
+    tft.fillScreen(TFT_BLACK);
+    pupilX -= 10;
+    pupilY += 10;
+    //eyes
+    tft.drawEllipse(SCREEN_WIDTH / 2 - 60, SCREEN_HEIGHT / 2 - 20, 40, 40, TFT_WHITE);
+    tft.fillEllipse(SCREEN_WIDTH / 2 - pupilX, SCREEN_HEIGHT / 2 - pupilY, 25, 25, TFT_WHITE);
+
+    pupilX += 20;
+    tft.drawEllipse(SCREEN_WIDTH / 2 + 60, SCREEN_HEIGHT / 2 - 20, 40, 40, TFT_WHITE);
+    tft.fillEllipse(SCREEN_WIDTH / 2 + pupilX, SCREEN_HEIGHT / 2 - pupilY, 25, 25, TFT_WHITE);
 
     //mouth
     tft.drawArc(SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2 + 40, 15, 20, 270, 90, TFT_WHITE, TFT_WHITE);
+    delay(300);
+
+
+    if (tick == 10) {
+      // blinking
+      tft.fillScreen(TFT_BLACK);
+      tft.fillRect(SCREEN_WIDTH / 2 - 100, SCREEN_HEIGHT / 2 - 20, 80, 2, TFT_WHITE);  // left
+      tft.fillRect(SCREEN_WIDTH / 2 + 20, SCREEN_HEIGHT / 2 - 20, 80, 2, TFT_WHITE);   // right
+
+      //mouth
+      tft.drawArc(SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2 + 40, 15, 20, 270, 90, TFT_WHITE, TFT_WHITE);
+      delay(100);
+      tick = 0;
+      pupilX = 60;
+      pupilY = 20;
+    }
+
+
+    if (tick == 10) {
+      // make it look around for a couple seconds
+    }
+
+
+
   } else if (expression == ANGRY) {
     // left eye
     tft.drawArc(SCREEN_WIDTH / 2 - 60, SCREEN_HEIGHT / 2 - 20, 40, 40, 270, 130, TFT_WHITE, TFT_WHITE);
@@ -159,6 +215,7 @@ void drawFace(faceExpressions expression) {
 
     // draw the mouth upside down
     tft.drawArc(SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2 + 80, 15, 20, 90, 270, TFT_WHITE, TFT_WHITE);
+    delay(900);
   } else if (expression == POKER) {
     // left eye
     tft.drawArc(SCREEN_WIDTH / 2 - 60, SCREEN_HEIGHT / 2 - 20, 40, 40, 270, 90, TFT_WHITE, TFT_WHITE);
@@ -180,6 +237,7 @@ void drawFace(faceExpressions expression) {
     tft.fillEllipse(SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2 + 40, 10, 10, TFT_BLACK);
   } else if (expression == HURT) {
     // left
+    delay(150);
     tft.drawArc(SCREEN_WIDTH / 2 - 60, SCREEN_HEIGHT / 2 - 20, 40, 40, 270, 90, TFT_WHITE, TFT_WHITE);
     tft.drawArc(SCREEN_WIDTH / 2 - 60, SCREEN_HEIGHT / 2 - 20, 25, 10, 270, 90, TFT_WHITE, TFT_WHITE);  // pupil
 
@@ -199,6 +257,7 @@ void drawFace(faceExpressions expression) {
 
       tft.drawArc(SCREEN_WIDTH / 2 + 5 * (2 * i + 1), SCREEN_HEIGHT / 2 + 80, 5, 5, startAngle, endAngle, TFT_WHITE, TFT_WHITE);
     }
+    delay(500);
   } else if (expression == DISTRESS) {
     // same as angry face but opposite (TODO combine them)
     // left eye
@@ -221,24 +280,12 @@ void drawFace(faceExpressions expression) {
       }
 
       // keep decresing until you reach the middle of the canvas
-      if(SCREEN_WIDTH / 2 - 15 < SCREEN_WIDTH){
+      if (SCREEN_WIDTH / 2 - 15 < SCREEN_WIDTH) {
         tft.drawArc(SCREEN_WIDTH / 2 - 15 * (2 * i + 1), SCREEN_HEIGHT / 2 + 80, 5, 5, startAngle, endAngle, TFT_WHITE, TFT_WHITE);
       }
       tft.drawArc(SCREEN_WIDTH / 2 - 15 * (2 * i + 1), SCREEN_HEIGHT / 2 + 80, 5, 5, startAngle, endAngle, TFT_WHITE, TFT_WHITE);
     }
-  } else {
-    // reset the eyes
-    pupilX = 60;
-    pupilY = 20;
-    //eyes
-    tft.drawEllipse(SCREEN_WIDTH / 2 - 60, SCREEN_HEIGHT / 2 - 20, 40, 40, TFT_WHITE);
-    tft.fillEllipse(SCREEN_WIDTH / 2 - pupilX, SCREEN_HEIGHT / 2 - pupilY, 25, 25, TFT_WHITE);
-
-    tft.drawEllipse(SCREEN_WIDTH / 2 + 60, SCREEN_HEIGHT / 2 - 20, 40, 40, TFT_WHITE);
-    tft.fillEllipse(SCREEN_WIDTH / 2 + pupilX, SCREEN_HEIGHT / 2 - pupilY, 25, 25, TFT_WHITE);
-
-    //mouth
-    tft.drawArc(SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2 + 40, 15, 20, 270, 90, TFT_WHITE, TFT_WHITE);
+    delay(800);
   }
 }
 
@@ -296,13 +343,36 @@ void setup() {
 
 
 void loop() {
-  Serial.println("incoming readings:");
-  Serial.print(incomingReadings.x);
-  tft.fillScreen(TFT_BLACK);
-  int i = 0;
+  Serial.print("x values:");
+  Serial.println(incomingReadings.x);
 
-  drawFace(DISTRESS);
-  tick++;
+  Serial.print("y values:");
+  Serial.println(incomingReadings.y);
+
+
+  tft.fillScreen(TFT_BLACK);
+
+
+  if (incomingReadings.x < 8.50) {
+    state = EEPY;
+  } else {
+    state = NEUTRAL;
+    tick++; // for the animation
+  }
+
+  if (abs(incomingReadings.z) > 10  ){
+    state=HURT;
+  }else if(int(analogRead(LDR_PIN) > 300)){
+    state=DISTRESS;
+  }
+
+  // 12 si -6 when laying flat
+  // 1 si 5 when up (sa nu se confunde cu awake)
+
+  //pokerface -> when saying a dad joke
+  //angry ->
+
+  drawFace(state);
 
   delay(100);
 }
