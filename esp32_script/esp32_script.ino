@@ -39,7 +39,7 @@ XPT2046_Touchscreen touchscreen(XPT2046_CS, XPT2046_IRQ);
 #define SCREEN_HEIGHT 240
 #define FONT_SIZE 2
 
-#define LDR_PIN 34 // light sensor
+#define LDR_PIN 34  // light sensor
 
 // Touchscreen coordinates: (x, y) and pressure (z)
 int x, y, z, eyeMoves, pupilX, pupilY, tick;
@@ -68,7 +68,7 @@ esp_now_peer_info_t peerInfo;
 enum faceExpressions {
   NEUTRAL,
   ANGRY,
-  POKER, 
+  POKER,
   DISTRESS,
   HURT,
   EEPY
@@ -125,6 +125,23 @@ void printTouchToDisplay(int touchX, int touchY, int touchZ) {
   textY += 20;
   tempText = "Pressure = " + String(touchZ);
   tft.drawCentreString(tempText, centerX, textY, FONT_SIZE);
+}
+
+void drawSpiral(){
+    int centerX = SCREEN_WIDTH / 2 + 110;
+    int centerY = SCREEN_HEIGHT / 2 - 75;
+    float angle = 0;
+    float radius = 1;
+    
+    while (radius < 35) {  // Stop when reaching screen limit
+        int x = centerX + radius * cos(angle);
+        int y = centerY + radius * sin(angle);
+        
+        tft.drawPixel(x, y, TFT_WHITE);  // Draw pixel at computed position
+        
+        angle += 0.1;  // Increase angle for next point
+        radius += 0.2;  // Expand radius gradually
+    }
 }
 
 void drawFace(faceExpressions expression) {
@@ -197,13 +214,6 @@ void drawFace(faceExpressions expression) {
       pupilY = 20;
     }
 
-
-    if (tick == 10) {
-      // make it look around for a couple seconds
-    }
-
-
-
   } else if (expression == ANGRY) {
     // left eye
     tft.drawArc(SCREEN_WIDTH / 2 - 60, SCREEN_HEIGHT / 2 - 20, 40, 40, 270, 130, TFT_WHITE, TFT_WHITE);
@@ -218,10 +228,12 @@ void drawFace(faceExpressions expression) {
     delay(900);
   } else if (expression == POKER) {
     // left eye
+    tft.fillRect(SCREEN_WIDTH / 2 - 100, SCREEN_HEIGHT / 2 - 20, 80, 2, TFT_WHITE);
     tft.drawArc(SCREEN_WIDTH / 2 - 60, SCREEN_HEIGHT / 2 - 20, 40, 40, 270, 90, TFT_WHITE, TFT_WHITE);
     tft.drawArc(SCREEN_WIDTH / 2 - 60, SCREEN_HEIGHT / 2 - 20, 25, 10, 270, 90, TFT_WHITE, TFT_WHITE);  // pupil
 
     // right eye
+    tft.fillRect(SCREEN_WIDTH / 2 + 20, SCREEN_HEIGHT / 2 - 20, 80, 2, TFT_WHITE);
     tft.drawArc(SCREEN_WIDTH / 2 + 60, SCREEN_HEIGHT / 2 - 20, 40, 40, 270, 90, TFT_WHITE, TFT_WHITE);
     tft.drawArc(SCREEN_WIDTH / 2 + 60, SCREEN_HEIGHT / 2 - 20, 25, 10, 270, 90, TFT_WHITE, TFT_WHITE);
 
@@ -229,6 +241,12 @@ void drawFace(faceExpressions expression) {
     tft.fillRect(SCREEN_WIDTH / 2 - 15, SCREEN_HEIGHT / 2 + 80, 30, 2, TFT_WHITE);  // draw a freaking rectangle in order to have a mouth thicker 😐
   } else if (expression == EEPY) {
     // draw the two eyes closed (maybe this can be reused when adding the blinking animation)
+    int font_size = FONT_SIZE;
+    for (int i = 0; i < 2; i++) {
+      tft.drawString("Z", SCREEN_WIDTH / 2 + 60 + (i * 20), SCREEN_HEIGHT / 2 - 50 - (i * 10), font_size);
+      font_size += 2;
+    }
+
     tft.fillRect(SCREEN_WIDTH / 2 - 100, SCREEN_HEIGHT / 2 - 20, 80, 2, TFT_WHITE);  // left
     tft.fillRect(SCREEN_WIDTH / 2 + 20, SCREEN_HEIGHT / 2 - 20, 80, 2, TFT_WHITE);   // right
 
@@ -236,8 +254,12 @@ void drawFace(faceExpressions expression) {
     tft.fillEllipse(SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2 + 40, 15, 15, TFT_WHITE);
     tft.fillEllipse(SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2 + 40, 10, 10, TFT_BLACK);
   } else if (expression == HURT) {
+    // spiral
+    drawSpiral();
+
     // left
     delay(150);
+    tft.fillRect(SCREEN_WIDTH / 2 - 100, SCREEN_HEIGHT / 2 - 20, 80, 2, TFT_WHITE);
     tft.drawArc(SCREEN_WIDTH / 2 - 60, SCREEN_HEIGHT / 2 - 20, 40, 40, 270, 90, TFT_WHITE, TFT_WHITE);
     tft.drawArc(SCREEN_WIDTH / 2 - 60, SCREEN_HEIGHT / 2 - 20, 25, 10, 270, 90, TFT_WHITE, TFT_WHITE);  // pupil
 
@@ -308,7 +330,7 @@ void setup() {
   // Clear the screen before writing to it
   //tft.fillScreen(TFT_BLACK);
   eyeMoves = 0;
-  // tft.setTextColor(TFT_BLACK, TFT_WHITE);
+  tft.setTextColor(TFT_WHITE, TFT_BLACK);
 
   // Set X and Y coordinates for center of display
   // int centerX = SCREEN_WIDTH / 2;
@@ -357,13 +379,14 @@ void loop() {
     state = EEPY;
   } else {
     state = NEUTRAL;
-    tick++; // for the animation
+    tick++;  // for the animation
   }
 
-  if (abs(incomingReadings.z) > 10  ){
-    state=HURT;
-  }else if(int(analogRead(LDR_PIN) > 300)){
-    state=DISTRESS;
+  // if (abs(incomingReadings.z) > 10) {
+  //   state = HURT;
+  // } else 
+  if (int(analogRead(LDR_PIN) > 300)) {
+    state = DISTRESS;
   }
 
   // 12 si -6 when laying flat
