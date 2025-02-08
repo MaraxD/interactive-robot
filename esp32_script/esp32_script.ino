@@ -95,53 +95,42 @@ void readMacAddress() {
   }
 }
 
-// Print Touchscreen info about X, Y and Pressure (Z) on the Serial Monitor
-void printTouchToSerial(int touchX, int touchY, int touchZ) {
-  Serial.print("X = ");
-  Serial.print(touchX);
-  Serial.print(" | Y = ");
-  Serial.print(touchY);
-  Serial.print(" | Pressure = ");
-  Serial.print(touchZ);
-  Serial.println();
+void drawSpiral() {
+  int centerX = SCREEN_WIDTH / 2 + 110;
+  int centerY = SCREEN_HEIGHT / 2 - 75;
+  float angle = 0;
+  float radius = 1;
+
+  while (radius < 35) {  // Stop when reaching screen limit
+    int x = centerX + radius * cos(angle);
+    int y = centerY + radius * sin(angle);
+
+    tft.drawPixel(x, y, TFT_WHITE);  // Draw pixel at computed position
+
+    angle += 0.1;   // Increase angle for next point
+    radius += 0.2;  // Expand radius gradually
+  }
 }
 
-// Print Touchscreen info about X, Y and Pressure (Z) on the TFT Display
-void printTouchToDisplay(int touchX, int touchY, int touchZ) {
-  // Clear TFT screen
-  tft.fillScreen(TFT_WHITE);
-  tft.setTextColor(TFT_BLACK, TFT_WHITE);
+void drawAnimeArc(int x, int y, int outerR, int innerR, int startAngle, int endAngle, uint16_t color) {
+  int x1, y1, x2, y2, x3, y3, x4, y4;
+  for (int i = startAngle; i < endAngle; i++) {
+    // Outer arc points
+    x1 = x + outerR * cos(radians(i));
+    y1 = y + outerR * sin(radians(i));
+    x2 = x + outerR * cos(radians(i + 1));
+    y2 = y + outerR * sin(radians(i + 1));
 
-  int centerX = SCREEN_WIDTH / 2;
-  int textY = 80;
+    // Inner arc points
+    x3 = x + innerR * cos(radians(i));
+    y3 = y + innerR * sin(radians(i));
+    x4 = x + innerR * cos(radians(i + 1));
+    y4 = y + innerR * sin(radians(i + 1));
 
-  String tempText = "X = " + String(touchX);
-  tft.drawCentreString(tempText, centerX, textY, FONT_SIZE);
-
-  textY += 20;
-  tempText = "Y = " + String(touchY);
-  tft.drawCentreString(tempText, centerX, textY, FONT_SIZE);
-
-  textY += 20;
-  tempText = "Pressure = " + String(touchZ);
-  tft.drawCentreString(tempText, centerX, textY, FONT_SIZE);
-}
-
-void drawSpiral(){
-    int centerX = SCREEN_WIDTH / 2 + 110;
-    int centerY = SCREEN_HEIGHT / 2 - 75;
-    float angle = 0;
-    float radius = 1;
-    
-    while (radius < 35) {  // Stop when reaching screen limit
-        int x = centerX + radius * cos(angle);
-        int y = centerY + radius * sin(angle);
-        
-        tft.drawPixel(x, y, TFT_WHITE);  // Draw pixel at computed position
-        
-        angle += 0.1;  // Increase angle for next point
-        radius += 0.2;  // Expand radius gradually
-    }
+    // Draw filled quad between the inner and outer arc points
+    tft.fillTriangle(x1, y1, x2, y2, x3, y3, color);
+    tft.fillTriangle(x3, y3, x4, y4, x2, y2, color);
+  }
 }
 
 void drawFace(faceExpressions expression) {
@@ -215,13 +204,24 @@ void drawFace(faceExpressions expression) {
     }
 
   } else if (expression == ANGRY) {
+    // anime angry marks 💢
+    for (int i = 0; i < 4; i++) {
+      int endAngle = i * 90 + 20;           // Start angle shifted for inward arcs
+      int startAngle = endAngle + 70;  // Ending angle
+
+      // Draw the arc with thickness
+      drawAnimeArc(SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2, 80, 60, startAngle, endAngle, TFT_WHITE);
+    }
+
     // left eye
-    tft.drawArc(SCREEN_WIDTH / 2 - 60, SCREEN_HEIGHT / 2 - 20, 40, 40, 270, 130, TFT_WHITE, TFT_WHITE);
-    tft.drawArc(SCREEN_WIDTH / 2 - 60, SCREEN_HEIGHT / 2 - 20, 25, 10, 270, 130, TFT_WHITE, TFT_WHITE);  // pupil
+    tft.drawLine(SCREEN_WIDTH / 2 - 90, SCREEN_HEIGHT / 2 - 45, SCREEN_WIDTH / 2 - 30, SCREEN_HEIGHT / 2, TFT_WHITE);
+    tft.drawArc(SCREEN_WIDTH / 2 - 60, SCREEN_HEIGHT / 2 - 20, 40, 40, 300, 130, TFT_WHITE, TFT_WHITE);
+    tft.drawArc(SCREEN_WIDTH / 2 - 60, SCREEN_HEIGHT / 2 - 20, 25, 10, 300, 130, TFT_WHITE, TFT_WHITE);  // pupil
 
     // right eye
-    tft.drawArc(SCREEN_WIDTH / 2 + 60, SCREEN_HEIGHT / 2 - 20, 40, 40, 230, 90, TFT_WHITE, TFT_WHITE);
-    tft.drawArc(SCREEN_WIDTH / 2 + 60, SCREEN_HEIGHT / 2 - 20, 25, 10, 230, 90, TFT_WHITE, TFT_WHITE);
+    tft.drawLine(SCREEN_WIDTH / 2 + 90, SCREEN_HEIGHT / 2 - 45, SCREEN_WIDTH / 2 + 30, SCREEN_HEIGHT / 2, TFT_WHITE);
+    tft.drawArc(SCREEN_WIDTH / 2 + 60, SCREEN_HEIGHT / 2 - 20, 40, 40, 230, 60, TFT_WHITE, TFT_WHITE);
+    tft.drawArc(SCREEN_WIDTH / 2 + 60, SCREEN_HEIGHT / 2 - 20, 25, 10, 230, 60, TFT_WHITE, TFT_WHITE);
 
     // draw the mouth upside down
     tft.drawArc(SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2 + 80, 15, 20, 90, 270, TFT_WHITE, TFT_WHITE);
@@ -384,7 +384,7 @@ void loop() {
 
   // if (abs(incomingReadings.z) > 10) {
   //   state = HURT;
-  // } else 
+  // } else
   if (int(analogRead(LDR_PIN) > 300)) {
     state = DISTRESS;
   }
@@ -395,7 +395,7 @@ void loop() {
   //pokerface -> when saying a dad joke
   //angry ->
 
-  drawFace(state);
+  drawFace(ANGRY);
 
   delay(100);
 }
