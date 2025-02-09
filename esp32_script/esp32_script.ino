@@ -23,27 +23,14 @@
 #include <esp_wifi.h>
 #include <esp_now.h>
 
-TFT_eSPI tft = TFT_eSPI();
-
-// Touchscreen pins
-#define XPT2046_IRQ 36   // T_IRQ
-#define XPT2046_MOSI 32  // T_DIN
-#define XPT2046_MISO 39  // T_OUT
-#define XPT2046_CLK 25   // T_CLK
-#define XPT2046_CS 33    // T_CS
-
-SPIClass touchscreenSPI = SPIClass(VSPI);
-XPT2046_Touchscreen touchscreen(XPT2046_CS, XPT2046_IRQ);
-
 #define SCREEN_WIDTH 320
 #define SCREEN_HEIGHT 240
 #define FONT_SIZE 2
 
 #define LDR_PIN 34  // light sensor
 
-// Touchscreen coordinates: (x, y) and pressure (z)
-int x, y, z, eyeMoves, pupilX, pupilY, tick;
-int startAngle, endAngle;
+TFT_eSPI tft = TFT_eSPI();
+int pupilX, pupilY, tick, startAngle, endAngle, xOffset;
 
 // Define variables to store incoming readings
 float incomingX, incomingY, incomingZ, currentY = 0;
@@ -206,7 +193,7 @@ void drawFace(faceExpressions expression) {
   } else if (expression == ANGRY) {
     // anime angry marks 💢
     for (int i = 0; i < 4; i++) {
-      int endAngle = i * 90 + 20;           // Start angle shifted for inward arcs
+      int endAngle = i * 90 + 20;      // Start angle shifted for inward arcs
       int startAngle = endAngle + 70;  // Ending angle
 
       // Draw the arc with thickness
@@ -269,43 +256,38 @@ void drawFace(faceExpressions expression) {
     tft.fillRect(SCREEN_WIDTH / 2 - 15, SCREEN_HEIGHT / 2 + 80, 15, 2, TFT_WHITE);
     for (int i = 0; i < 4; i++) {
       //create 4 arcs, alternating in placement (first is the lower arc, then the upper arc and so on..)
-      startAngle = 270;
-      endAngle = 90;
+      startAngle = (i % 2 == 0) ? 270 : 90;
+      endAngle = (i % 2 == 0) ? 90 : 270;
 
-      if (i % 2 != 0) {
-        startAngle = 90;
-        endAngle = 270;
-      }
+      xOffset = 5 * (2 * i + 1);
 
-      tft.drawArc(SCREEN_WIDTH / 2 + 5 * (2 * i + 1), SCREEN_HEIGHT / 2 + 80, 5, 5, startAngle, endAngle, TFT_WHITE, TFT_WHITE);
+      tft.drawArc(SCREEN_WIDTH / 2 + xOffset, SCREEN_HEIGHT / 2 + 80, 5, 5, startAngle, endAngle, TFT_WHITE, TFT_WHITE);
     }
     delay(500);
   } else if (expression == DISTRESS) {
+    int distanceToCenter;
     // same as angry face but opposite (TODO combine them)
     // left eye
-    tft.drawArc(SCREEN_WIDTH / 2 + 60, SCREEN_HEIGHT / 2 - 20, 40, 40, 270, 130, TFT_WHITE, TFT_WHITE);
-    tft.drawArc(SCREEN_WIDTH / 2 + 60, SCREEN_HEIGHT / 2 - 20, 25, 10, 270, 130, TFT_WHITE, TFT_WHITE);  // pupil
+    tft.drawLine(SCREEN_WIDTH / 2 - 90, SCREEN_HEIGHT / 2, SCREEN_WIDTH / 2 - 30, SCREEN_HEIGHT / 2 - 45, TFT_WHITE);
+    tft.drawArc(SCREEN_WIDTH / 2 + 60, SCREEN_HEIGHT / 2 - 20, 40, 40, 300, 130, TFT_WHITE, TFT_WHITE);
+    tft.drawArc(SCREEN_WIDTH / 2 + 60, SCREEN_HEIGHT / 2 - 20, 25, 10, 300, 130, TFT_WHITE, TFT_WHITE);  // pupil
 
     // right eye
-    tft.drawArc(SCREEN_WIDTH / 2 - 60, SCREEN_HEIGHT / 2 - 20, 40, 40, 230, 90, TFT_WHITE, TFT_WHITE);
-    tft.drawArc(SCREEN_WIDTH / 2 - 60, SCREEN_HEIGHT / 2 - 20, 25, 10, 230, 90, TFT_WHITE, TFT_WHITE);
+    tft.drawLine(SCREEN_WIDTH / 2 + 90, SCREEN_HEIGHT / 2, SCREEN_WIDTH / 2 + 30, SCREEN_HEIGHT / 2 - 45, TFT_WHITE);
+    tft.drawArc(SCREEN_WIDTH / 2 - 60, SCREEN_HEIGHT / 2 - 20, 40, 40, 230, 60, TFT_WHITE, TFT_WHITE);
+    tft.drawArc(SCREEN_WIDTH / 2 - 60, SCREEN_HEIGHT / 2 - 20, 25, 10, 230, 60, TFT_WHITE, TFT_WHITE);
 
     // squigly mouth
-    for (int i = 0; i < 6; i++) {
+    for (int i = 0; i < 4; i++) {
       //create 4 arcs, alternating in placement (first is the lower arc, then the upper arc and so on..)
-      startAngle = 270;
-      endAngle = 90;
-
-      if (i % 2 != 0) {
-        startAngle = 90;
-        endAngle = 270;
-      }
+      startAngle = (i % 2 == 0) ? 270 : 90;
+      endAngle = (i % 2 == 0) ? 90 : 270;
 
       // keep decresing until you reach the middle of the canvas
-      if (SCREEN_WIDTH / 2 - 15 < SCREEN_WIDTH) {
-        tft.drawArc(SCREEN_WIDTH / 2 - 15 * (2 * i + 1), SCREEN_HEIGHT / 2 + 80, 5, 5, startAngle, endAngle, TFT_WHITE, TFT_WHITE);
-      }
-      tft.drawArc(SCREEN_WIDTH / 2 - 15 * (2 * i + 1), SCREEN_HEIGHT / 2 + 80, 5, 5, startAngle, endAngle, TFT_WHITE, TFT_WHITE);
+      xOffset = 5 * (2 * i);
+
+      tft.drawArc(SCREEN_WIDTH / 2 - xOffset, SCREEN_HEIGHT / 2 + 80, 5, 5, startAngle, endAngle, TFT_WHITE, TFT_WHITE);
+      tft.drawArc(SCREEN_WIDTH / 2 + xOffset, SCREEN_HEIGHT / 2 + 80, 5, 5, startAngle, endAngle, TFT_WHITE, TFT_WHITE);
     }
     delay(800);
   }
@@ -314,29 +296,17 @@ void drawFace(faceExpressions expression) {
 void setup() {
   Serial.begin(115200);
 
-  // Start the SPI for the touchscreen and init the touchscreen
-  touchscreenSPI.begin(XPT2046_CLK, XPT2046_MISO, XPT2046_MOSI, XPT2046_CS);
-  touchscreen.begin(touchscreenSPI);
-  // Set the Touchscreen rotation in landscape mode
-  // Note: in some displays, the touchscreen might be upside down, so you might need to set the rotation to 3: touchscreen.setRotation(3);
-  touchscreen.setRotation(1);
-
   // Start the tft display
   tft.init();
   // Set the TFT display rotation in landscape mode
   tft.setRotation(1);
 
   tft.invertDisplay(1);  //invert the display at code level
-  // Clear the screen before writing to it
-  //tft.fillScreen(TFT_BLACK);
-  eyeMoves = 0;
   tft.setTextColor(TFT_WHITE, TFT_BLACK);
 
   // Set X and Y coordinates for center of display
   // int centerX = SCREEN_WIDTH / 2;
   // int centerY = SCREEN_HEIGHT / 2;
-
-  // tft.drawCentreString("Touch screen to test", centerX, centerY, FONT_SIZE);
 
   // Set device as a Wi-Fi Station
   WiFi.mode(WIFI_STA);
@@ -395,7 +365,7 @@ void loop() {
   //pokerface -> when saying a dad joke
   //angry ->
 
-  drawFace(ANGRY);
+  drawFace(DISTRESS);
 
   delay(100);
 }
