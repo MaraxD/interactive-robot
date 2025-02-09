@@ -15,11 +15,8 @@
     *** YOU MUST USE THE User_Setup.h FILE PROVIDED IN THE LINK BELOW IN ORDER TO USE THE EXAMPLES FROM RANDOM NERD TUTORIALS ***
     FULL INSTRUCTIONS AVAILABLE ON HOW CONFIGURE THE LIBRARY: https://RandomNerdTutorials.com/cyd/ or https://RandomNerdTutorials.com/esp32-tft/   */
 #include <TFT_eSPI.h>
-
-// Install the "XPT2046_Touchscreen" library by Paul Stoffregen to use the Touchscreen - https://github.com/PaulStoffregen/XPT2046_Touchscreen
-// Note: this library doesn't require further configuration
-#include <XPT2046_Touchscreen.h>
 #include <WiFi.h>
+#include <HTTPClient.h>
 #include <esp_wifi.h>
 #include <esp_now.h>
 
@@ -34,6 +31,13 @@ int pupilX, pupilY, tick, startAngle, endAngle, xOffset;
 
 // Define variables to store incoming readings
 float incomingX, incomingY, incomingZ, currentY = 0;
+
+String localServerName = "";
+const char* ssid = "";
+const char* password = "";  // 
+
+unsigned long lastTime = 0;
+unsigned long timerDelay = 5000;
 
 // mac addres of the esp w/acc
 uint8_t broadcastAddress[] = { 0xD8, 0x3B, 0xDA, 0x99, 0x61, 0xAC };
@@ -289,7 +293,40 @@ void drawFace(faceExpressions expression) {
       tft.drawArc(SCREEN_WIDTH / 2 - xOffset, SCREEN_HEIGHT / 2 + 80, 5, 5, startAngle, endAngle, TFT_WHITE, TFT_WHITE);
       tft.drawArc(SCREEN_WIDTH / 2 + xOffset, SCREEN_HEIGHT / 2 + 80, 5, 5, startAngle, endAngle, TFT_WHITE, TFT_WHITE);
     }
+    playSound("ceva");
     delay(800);
+  }
+}
+
+void playSound(String fileName) {
+  //Check WiFi connection status
+  if (WiFi.status() == WL_CONNECTED) {
+    HTTPClient http;
+
+    String serverPath = localServerName + "fileName";
+
+    // Your Domain name with URL path or IP address with path
+    http.begin(serverPath.c_str());
+
+    // If you need Node-RED/server authentication, insert user and password below
+    //http.setAuthorization("REPLACE_WITH_SERVER_USERNAME", "REPLACE_WITH_SERVER_PASSWORD");
+
+    // Send HTTP GET request
+    int httpResponseCode = http.GET();
+
+    if (httpResponseCode > 0) {
+      Serial.print("HTTP Response code: ");
+      Serial.println(httpResponseCode);
+      String payload = http.getString();
+      Serial.println(payload);
+    } else {
+      Serial.print("Error code: ");
+      Serial.println(httpResponseCode);
+    }
+    // Free resources
+    http.end();
+  } else {
+    Serial.println("WiFi Disconnected");
   }
 }
 
@@ -331,6 +368,17 @@ void setup() {
 
   // init variables
   tick = 0;
+
+  // connecting to network
+  WiFi.begin(ssid, password);
+  Serial.println("Connecting...");
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
+    Serial.print(".");
+  }
+  Serial.println("");
+  Serial.print("Connected to WiFi network with IP Address: ");
+  Serial.println(WiFi.localIP());
 }
 
 
@@ -365,7 +413,7 @@ void loop() {
   //pokerface -> when saying a dad joke
   //angry ->
 
-  drawFace(DISTRESS);
+  drawFace(state);
 
   delay(100);
 }
