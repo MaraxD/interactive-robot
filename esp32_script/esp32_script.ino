@@ -32,12 +32,13 @@ int pupilX, pupilY, tick, startAngle, endAngle, xOffset;
 // Define variables to store incoming readings
 float incomingX, incomingY, incomingZ, currentY = 0;
 
-String localServerName = "";
-const char* ssid = "";
-const char* password = "";  // 
+// String localServerName = <YOUR_SERVER_IP_ADRESS>;
+// const char* ssid = <YOUR_WIFI_NAME>;
+// const char* password = <YOUR_WIFI_PASSWORD>;  
 
-unsigned long lastTime = 0;
-unsigned long timerDelay = 5000;
+
+char receivedDataString[128];
+String jokeTopic;
 
 // mac addres of the esp w/acc
 uint8_t broadcastAddress[] = { 0xD8, 0x3B, 0xDA, 0x99, 0x61, 0xAC };
@@ -103,27 +104,6 @@ void drawSpiral() {
   }
 }
 
-void drawAnimeArc(int x, int y, int outerR, int innerR, int startAngle, int endAngle, uint16_t color) {
-  int x1, y1, x2, y2, x3, y3, x4, y4;
-  for (int i = startAngle; i < endAngle; i++) {
-    // Outer arc points
-    x1 = x + outerR * cos(radians(i));
-    y1 = y + outerR * sin(radians(i));
-    x2 = x + outerR * cos(radians(i + 1));
-    y2 = y + outerR * sin(radians(i + 1));
-
-    // Inner arc points
-    x3 = x + innerR * cos(radians(i));
-    y3 = y + innerR * sin(radians(i));
-    x4 = x + innerR * cos(radians(i + 1));
-    y4 = y + innerR * sin(radians(i + 1));
-
-    // Draw filled quad between the inner and outer arc points
-    tft.fillTriangle(x1, y1, x2, y2, x3, y3, color);
-    tft.fillTriangle(x3, y3, x4, y4, x2, y2, color);
-  }
-}
-
 void drawFace(faceExpressions expression) {
 
   // if it s neutral, animate the eyes
@@ -131,13 +111,10 @@ void drawFace(faceExpressions expression) {
     // TODO refactor
     pupilX = 60;
     pupilY = 20;
-    // pupilX += 10;
-    // pupilY += 10;
     //eyes
     tft.drawEllipse(SCREEN_WIDTH / 2 - 60, SCREEN_HEIGHT / 2 - 20, 40, 40, TFT_WHITE);
     tft.fillEllipse(SCREEN_WIDTH / 2 - pupilX, SCREEN_HEIGHT / 2 - pupilY, 25, 25, TFT_WHITE);
 
-    // pupilX -= 20;
     tft.drawEllipse(SCREEN_WIDTH / 2 + 60, SCREEN_HEIGHT / 2 - 20, 40, 40, TFT_WHITE);
     tft.fillEllipse(SCREEN_WIDTH / 2 + pupilX, SCREEN_HEIGHT / 2 - pupilY, 25, 25, TFT_WHITE);
 
@@ -195,15 +172,6 @@ void drawFace(faceExpressions expression) {
     }
 
   } else if (expression == ANGRY) {
-    // anime angry marks 💢
-    for (int i = 0; i < 4; i++) {
-      int endAngle = i * 90 + 20;      // Start angle shifted for inward arcs
-      int startAngle = endAngle + 70;  // Ending angle
-
-      // Draw the arc with thickness
-      drawAnimeArc(SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2, 80, 60, startAngle, endAngle, TFT_WHITE);
-    }
-
     // left eye
     tft.drawLine(SCREEN_WIDTH / 2 - 90, SCREEN_HEIGHT / 2 - 45, SCREEN_WIDTH / 2 - 30, SCREEN_HEIGHT / 2, TFT_WHITE);
     tft.drawArc(SCREEN_WIDTH / 2 - 60, SCREEN_HEIGHT / 2 - 20, 40, 40, 300, 130, TFT_WHITE, TFT_WHITE);
@@ -216,7 +184,7 @@ void drawFace(faceExpressions expression) {
 
     // draw the mouth upside down
     tft.drawArc(SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2 + 80, 15, 20, 90, 270, TFT_WHITE, TFT_WHITE);
-    delay(900);
+    delay(1000);
   } else if (expression == POKER) {
     // left eye
     tft.fillRect(SCREEN_WIDTH / 2 - 100, SCREEN_HEIGHT / 2 - 20, 80, 2, TFT_WHITE);
@@ -230,6 +198,8 @@ void drawFace(faceExpressions expression) {
 
     // draw the mouth in a straight line
     tft.fillRect(SCREEN_WIDTH / 2 - 15, SCREEN_HEIGHT / 2 + 80, 30, 2, TFT_WHITE);  // draw a freaking rectangle in order to have a mouth thicker 😐
+
+    delay(1000);
   } else if (expression == EEPY) {
     // draw the two eyes closed (maybe this can be reused when adding the blinking animation)
     int font_size = FONT_SIZE;
@@ -249,7 +219,6 @@ void drawFace(faceExpressions expression) {
     drawSpiral();
 
     // left
-    delay(150);
     tft.fillRect(SCREEN_WIDTH / 2 - 100, SCREEN_HEIGHT / 2 - 20, 80, 2, TFT_WHITE);
     tft.drawArc(SCREEN_WIDTH / 2 - 60, SCREEN_HEIGHT / 2 - 20, 40, 40, 270, 90, TFT_WHITE, TFT_WHITE);
     tft.drawArc(SCREEN_WIDTH / 2 - 60, SCREEN_HEIGHT / 2 - 20, 25, 10, 270, 90, TFT_WHITE, TFT_WHITE);  // pupil
@@ -267,7 +236,7 @@ void drawFace(faceExpressions expression) {
 
       tft.drawArc(SCREEN_WIDTH / 2 + xOffset, SCREEN_HEIGHT / 2 + 80, 5, 5, startAngle, endAngle, TFT_WHITE, TFT_WHITE);
     }
-    delay(500);
+    delay(800);
   } else if (expression == DISTRESS) {
     int distanceToCenter;
     // same as angry face but opposite (TODO combine them)
@@ -293,38 +262,38 @@ void drawFace(faceExpressions expression) {
       tft.drawArc(SCREEN_WIDTH / 2 - xOffset, SCREEN_HEIGHT / 2 + 80, 5, 5, startAngle, endAngle, TFT_WHITE, TFT_WHITE);
       tft.drawArc(SCREEN_WIDTH / 2 + xOffset, SCREEN_HEIGHT / 2 + 80, 5, 5, startAngle, endAngle, TFT_WHITE, TFT_WHITE);
     }
-    playSound("robot_sounds","screaming_sound");
+    // playSound("robot_sounds","screaming_sound");
     delay(800);
   }
 }
 
-void playSound(String folderName, String fileName) {
-  //check WiFi connection status
-  if (WiFi.status() == WL_CONNECTED) {
-    HTTPClient http;
+// void playSound(String folderName, String fileName) {
+//   //check WiFi connection status
+//   if (WiFi.status() == WL_CONNECTED) {
+//     HTTPClient http;
 
-    String serverPath = localServerName + "/play/" + folderName + "?filename=" +fileName;
+//     String serverPath = localServerName + "/play/" + folderName + "?filename=" +fileName;
 
-    http.begin(serverPath.c_str());
+//     http.begin(serverPath.c_str());
 
-    // send HTTP GET request
-    int httpResponseCode = http.GET();
+//     // send HTTP GET request
+//     int httpResponseCode = http.GET();
 
-    if (httpResponseCode > 0) {
-      Serial.print("HTTP Response code: ");
-      Serial.println(httpResponseCode);
-      String payload = http.getString();
-      Serial.println(payload);
-    } else {
-      Serial.print("Error code: ");
-      Serial.println(httpResponseCode);
-    }
-    // free resources
-    http.end();
-  } else {
-    Serial.println("WiFi Disconnected");
-  }
-}
+//     if (httpResponseCode > 0) {
+//       Serial.print("HTTP Response code: ");
+//       Serial.println(httpResponseCode);
+//       String payload = http.getString();
+//       Serial.println(payload);
+//     } else {
+//       Serial.print("Error code: ");
+//       Serial.println(httpResponseCode);
+//     }
+//     // free resources
+//     http.end();
+//   } else {
+//     Serial.println("WiFi Disconnected");
+//   }
+// }
 
 void setup() {
   Serial.begin(115200);
@@ -336,10 +305,6 @@ void setup() {
 
   tft.invertDisplay(1);  //invert the display at code level
   tft.setTextColor(TFT_WHITE, TFT_BLACK);
-
-  // Set X and Y coordinates for center of display
-  // int centerX = SCREEN_WIDTH / 2;
-  // int centerY = SCREEN_HEIGHT / 2;
 
   // Set device as a Wi-Fi Station
   WiFi.mode(WIFI_STA);
@@ -366,15 +331,15 @@ void setup() {
   tick = 0;
 
   // connecting to network
-  WiFi.begin(ssid, password);
-  Serial.println("Connecting...");
-  while (WiFi.status() != WL_CONNECTED) {
-    delay(500);
-    Serial.print(".");
-  }
-  Serial.println("");
-  Serial.print("Connected to WiFi network with IP Address: ");
-  Serial.println(WiFi.localIP());
+  // WiFi.begin(ssid, password);
+  // Serial.println("Connecting...");
+  // while (WiFi.status() != WL_CONNECTED) {
+  //   delay(500);
+  //   Serial.print(".");
+  // }
+  // Serial.println("");
+  // Serial.print("Connected to WiFi network with IP Address: ");
+  // Serial.println(WiFi.localIP());
 }
 
 
@@ -389,25 +354,32 @@ void loop() {
   tft.fillScreen(TFT_BLACK);
 
 
-  if (incomingReadings.x < 8.50) {
+  if (incomingReadings.z > 6) {
     state = EEPY;
   } else {
     state = NEUTRAL;
     tick++;  // for the animation
   }
 
-  // if (abs(incomingReadings.z) > 10) {
-  //   state = HURT;
-  // } else
-  if (int(analogRead(LDR_PIN) > 300)) {
+  if (abs(incomingReadings.y) > 8) {
+    state = HURT;
+  } else if (int(analogRead(LDR_PIN) > 300)) {
     state = DISTRESS;
   }
 
-  // 12 si -6 when laying flat
-  // 1 si 5 when up (sa nu se confunde cu awake)
-
-  //pokerface -> when saying a dad joke
-  //angry ->
+  // for the poker face
+  if (Serial.available()) {
+    String receivedData = Serial.readStringUntil('\n');  // read until newline
+    Serial.print("Received: ");
+    receivedData.toCharArray(receivedDataString, sizeof(receivedDataString));
+    Serial.println(receivedData);
+    jokeTopic=strtok(receivedDataString, ":");
+    if (jokeTopic == "dad joke") {
+      state = POKER;
+    } else {
+      state = ANGRY;
+    }
+  }
 
   drawFace(state);
 

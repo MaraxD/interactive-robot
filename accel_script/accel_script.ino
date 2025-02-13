@@ -27,12 +27,6 @@
 // mac addres of the esp display
 uint8_t broadcastAddress[] = { 0x24, 0xDC, 0xC3, 0x45, 0xF2, 0xBC };
 
-// software SPI
-//Adafruit_LIS3DH lis = Adafruit_LIS3DH(LIS3DH_CS, LIS3DH_MOSI, LIS3DH_MISO, LIS3DH_CLK);
-// hardware SPI
-//Adafruit_LIS3DH lis = Adafruit_LIS3DH(LIS3DH_CS);
-// Low Power 5Khz data rate needs faster SPI, and calling setPerformanceMode & setDataRate
-//Adafruit_LIS3DH lis = Adafruit_LIS3DH(LIS3DH_CS, 2000000);
 // I2C
 Adafruit_LIS3DH lis = Adafruit_LIS3DH();
 // Variable to store if sending data was successful
@@ -65,15 +59,13 @@ void OnDataSent(const uint8_t *mac_addr, esp_now_send_status_t status) {
   }
 }
 
-
-
 void readMacAddress() {
   uint8_t baseMac[6];
   esp_err_t ret = esp_wifi_get_mac(WIFI_IF_STA, baseMac);
   if (ret == ESP_OK) {
-    // Serial.printf("%hhX:%hhX:%hhX:%hhX:%hhX:%hhX",
-    //               baseMac[0], baseMac[1], baseMac[2],
-    //               baseMac[3], baseMac[4], baseMac[5]);
+    Serial.printf("%hhX:%hhX:%hhX:%hhX:%hhX:%hhX",
+                  baseMac[0], baseMac[1], baseMac[2],
+                  baseMac[3], baseMac[4], baseMac[5]);
 
 
   } else {
@@ -81,14 +73,6 @@ void readMacAddress() {
   }
 }
 
-void ceva() {
-  Serial.begin(115200);
-  WiFi.mode(WIFI_STA);
-  WiFi.STA.begin();
-
-  Serial.print("[DEFAULT] ESP32 Board MAC Address: ");
-  //readMacAddress();
-}
 
 void setup(void) {
   Serial.begin(115200);
