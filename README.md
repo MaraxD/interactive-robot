@@ -52,4 +52,4 @@ const char* ssid = <YOUR_WIFI_NAME>;
 const char* password = <YOUR_WIFI_PASSWORD>;  //
 ```
 <br>
-Now that everything has been configured correctly, plug in both the ESP32s into the laptop and flash the code into both of them. **!!! When flashing the code on the main ESP32 board, keep pressing on the BOOT button right when the uploading starts !!!**
+Now that everything has been configured correctly, plug in both the ESP32s into the laptop and flash the code into both of them. <b>!!! When flashing the code on the main ESP32 board, keep pressing on the BOOT button right when the uploading starts !!!</b>
