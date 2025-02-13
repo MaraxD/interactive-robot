@@ -32,9 +32,9 @@ int pupilX, pupilY, tick, startAngle, endAngle, xOffset;
 // Define variables to store incoming readings
 float incomingX, incomingY, incomingZ, currentY = 0;
 
-String localServerName = "";
-const char* ssid = "";
-const char* password = "";  // 
+String localServerName = "http://192.168.1.201:5000";
+const char* ssid = "TP-Link_1674-extension";
+const char* password = "06671624";  // 
 
 unsigned long lastTime = 0;
 unsigned long timerDelay = 5000;
@@ -293,25 +293,21 @@ void drawFace(faceExpressions expression) {
       tft.drawArc(SCREEN_WIDTH / 2 - xOffset, SCREEN_HEIGHT / 2 + 80, 5, 5, startAngle, endAngle, TFT_WHITE, TFT_WHITE);
       tft.drawArc(SCREEN_WIDTH / 2 + xOffset, SCREEN_HEIGHT / 2 + 80, 5, 5, startAngle, endAngle, TFT_WHITE, TFT_WHITE);
     }
-    playSound("ceva");
+    playSound("robot_sounds","screaming_sound");
     delay(800);
   }
 }
 
-void playSound(String fileName) {
-  //Check WiFi connection status
+void playSound(String folderName, String fileName) {
+  //check WiFi connection status
   if (WiFi.status() == WL_CONNECTED) {
     HTTPClient http;
 
-    String serverPath = localServerName + "fileName";
+    String serverPath = localServerName + "/play/" + folderName + "?filename=" +fileName;
 
-    // Your Domain name with URL path or IP address with path
     http.begin(serverPath.c_str());
 
-    // If you need Node-RED/server authentication, insert user and password below
-    //http.setAuthorization("REPLACE_WITH_SERVER_USERNAME", "REPLACE_WITH_SERVER_PASSWORD");
-
-    // Send HTTP GET request
+    // send HTTP GET request
     int httpResponseCode = http.GET();
 
     if (httpResponseCode > 0) {
@@ -323,7 +319,7 @@ void playSound(String fileName) {
       Serial.print("Error code: ");
       Serial.println(httpResponseCode);
     }
-    // Free resources
+    // free resources
     http.end();
   } else {
     Serial.println("WiFi Disconnected");

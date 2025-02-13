@@ -11,6 +11,12 @@
 #include <WiFi.h>
 #include <esp_wifi.h>
 
+#include <Adafruit_NeoPixel.h>
+
+// light pins
+#define LED_PIN 5    // chosen gpio
+#define NUM_LEDS 12  // number of leds in the strip
+
 // Used for software SPI
 #define LIS3DH_CLK 13
 #define LIS3DH_MISO 12
@@ -44,6 +50,9 @@ typedef struct struct_message {
 struct_message AccReadings;
 
 esp_now_peer_info_t peerInfo;
+
+Adafruit_NeoPixel strip(NUM_LEDS, LED_PIN, NEO_GRB + NEO_KHZ800);
+int initialBrightness=255, flip;
 
 // Callback when data is sent
 void OnDataSent(const uint8_t *mac_addr, esp_now_send_status_t status) {
@@ -156,6 +165,11 @@ void setup(void) {
     Serial.println("Failed to add peer");
     return;
   }
+
+  // lights
+  strip.begin();
+  strip.setBrightness(initialBrightness);
+  strip.show();  // initialize all pixels to 'off'
 }
 
 void loop() {
@@ -164,9 +178,12 @@ void loop() {
   sensors_event_t event;
   lis.getEvent(&event);
 
-  Serial.print("\t\tX: "); Serial.print(event.acceleration.x);
-  Serial.print(" \tY: "); Serial.print(event.acceleration.y);
-  Serial.print(" \tZ: "); Serial.print(event.acceleration.z);
+  Serial.print("\t\tX: ");
+  Serial.print(event.acceleration.x);
+  Serial.print(" \tY: ");
+  Serial.print(event.acceleration.y);
+  Serial.print(" \tZ: ");
+  Serial.print(event.acceleration.z);
   Serial.println(" m/s^2 ");
 
   Serial.println();
@@ -184,5 +201,18 @@ void loop() {
   // Send message via ESP-NOW
   esp_err_t result = esp_now_send(broadcastAddress, (uint8_t *)&AccReadings, sizeof(AccReadings));
 
-  delay(200);
+  // simulate "beating heart"
+  strip.setPixelColor(6, strip.Color(255, 0, 0));  // red
+
+  initialBrightness-=10*flip;
+  strip.setBrightness(initialBrightness);
+  strip.show();
+
+  if(initialBrightness==100){
+    flip=-1;
+  }else if(initialBrightness==255){
+    flip=1;
+  }
+
+  delay(100);
 }
