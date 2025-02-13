@@ -32,9 +32,9 @@ int pupilX, pupilY, tick, startAngle, endAngle, xOffset;
 // Define variables to store incoming readings
 float incomingX, incomingY, incomingZ, currentY = 0;
 
-String localServerName = "http://192.168.1.201:5000";
-const char* ssid = "TP-Link_1674-extension";
-const char* password = "06671624";  // 
+String localServerName = "";
+const char* ssid = "";
+const char* password = "";  // 
 
 unsigned long lastTime = 0;
 unsigned long timerDelay = 5000;
