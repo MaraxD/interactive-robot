@@ -22,6 +22,7 @@
 3. In order for the TST_eSPI library to work, you need to prepare User_Setup.h config file:
 <br>    -> preparing the config file for Windows PC (https://randomnerdtutorials.com/cheap-yellow-display-esp32-2432s028r/#config-file-windows-pc)
 <br>    -> preparing the config file for Mac OS (https://randomnerdtutorials.com/cheap-yellow-display-esp32-2432s028r/#config-file-mac-os)
+4. Run the readMacAddress function (found in both scipts), to get the MAC address of each ESP, then assign the opposite values to <b> broadcastAddress </b> variable.
 
 ## Wiring up LIS3DH to the main ESP32 board
 LIS3DH | ESP32 | Info | 
@@ -38,7 +39,20 @@ VCC | 5V | Power - always use 5V!!! |
 GND | GND | Ground |
 DO | 5 | Data Out - any digital output pin can be used |
 
-## Setting up the local server
+## Send messages to the robot
+Open the textToESP file, and run the following command:
+```bash
+pip install pyserial
+```
+and,
+```python
+SERIAL_PORT = "/dev/<PORT>" # should be the same as the one in arduino (go to Tools -> Port)
+BAUD_RATE = 115200  # must match the ESP baud rate
+```
+Now run the script and follow the prompt.
+<br>
+
+## [Optional] Setting up the local server
 Run the following command,
 ```bash
  flask --app main run --host=0.0.0.0
