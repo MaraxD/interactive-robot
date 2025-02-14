@@ -27,14 +27,14 @@
 #define LDR_PIN 34  // light sensor
 
 TFT_eSPI tft = TFT_eSPI();
-int pupilX, pupilY, tick, startAngle, endAngle, xOffset;
+int pupilX, pupilY, tick, startAngle, endAngle, xOffset, pupilRadius;
 
 // Define variables to store incoming readings
 float incomingX, incomingY, incomingZ, currentY = 0;
 
 // String localServerName = <YOUR_SERVER_IP_ADRESS>;
 // const char* ssid = <YOUR_WIFI_NAME>;
-// const char* password = <YOUR_WIFI_PASSWORD>;  
+// const char* password = <YOUR_WIFI_PASSWORD>;
 
 
 char receivedDataString[128];
@@ -101,6 +101,16 @@ void drawSpiral() {
 
     angle += 0.1;   // Increase angle for next point
     radius += 0.2;  // Expand radius gradually
+  }
+}
+
+void drawPupils(int startAngleL = NULL, int endAngleL = NULL, int startAngleR = NULL, int endAngleR = NULL) {
+  // draw both pupils at the same time
+  for (int r = 0; r <= pupilRadius; r++) {
+    if (startAngleL && endAngleL)
+      tft.drawArc(SCREEN_WIDTH / 2 - 60, SCREEN_HEIGHT / 2 - 20, r, r + 1, startAngleL, endAngleL, TFT_WHITE, TFT_WHITE);
+    if (startAngleR && endAngleR)
+      tft.drawArc(SCREEN_WIDTH / 2 + 60, SCREEN_HEIGHT / 2 - 20, r, r + 1, startAngleR, endAngleR, TFT_WHITE, TFT_WHITE);
   }
 }
 
@@ -177,6 +187,8 @@ void drawFace(faceExpressions expression) {
     tft.drawArc(SCREEN_WIDTH / 2 - 60, SCREEN_HEIGHT / 2 - 20, 40, 40, 300, 130, TFT_WHITE, TFT_WHITE);
     tft.drawArc(SCREEN_WIDTH / 2 - 60, SCREEN_HEIGHT / 2 - 20, 25, 10, 300, 130, TFT_WHITE, TFT_WHITE);  // pupil
 
+    drawPupils(300, 130, 230, 60);
+
     // right eye
     tft.drawLine(SCREEN_WIDTH / 2 + 90, SCREEN_HEIGHT / 2 - 45, SCREEN_WIDTH / 2 + 30, SCREEN_HEIGHT / 2, TFT_WHITE);
     tft.drawArc(SCREEN_WIDTH / 2 + 60, SCREEN_HEIGHT / 2 - 20, 40, 40, 230, 60, TFT_WHITE, TFT_WHITE);
@@ -189,12 +201,13 @@ void drawFace(faceExpressions expression) {
     // left eye
     tft.fillRect(SCREEN_WIDTH / 2 - 100, SCREEN_HEIGHT / 2 - 20, 80, 2, TFT_WHITE);
     tft.drawArc(SCREEN_WIDTH / 2 - 60, SCREEN_HEIGHT / 2 - 20, 40, 40, 270, 90, TFT_WHITE, TFT_WHITE);
-    tft.drawArc(SCREEN_WIDTH / 2 - 60, SCREEN_HEIGHT / 2 - 20, 25, 10, 270, 90, TFT_WHITE, TFT_WHITE);  // pupil
+
+    // draw both pupils at the same time
+    drawPupils(270, 90, 270, 90);
 
     // right eye
     tft.fillRect(SCREEN_WIDTH / 2 + 20, SCREEN_HEIGHT / 2 - 20, 80, 2, TFT_WHITE);
     tft.drawArc(SCREEN_WIDTH / 2 + 60, SCREEN_HEIGHT / 2 - 20, 40, 40, 270, 90, TFT_WHITE, TFT_WHITE);
-    tft.drawArc(SCREEN_WIDTH / 2 + 60, SCREEN_HEIGHT / 2 - 20, 25, 10, 270, 90, TFT_WHITE, TFT_WHITE);
 
     // draw the mouth in a straight line
     tft.fillRect(SCREEN_WIDTH / 2 - 15, SCREEN_HEIGHT / 2 + 80, 30, 2, TFT_WHITE);  // draw a freaking rectangle in order to have a mouth thicker 😐
@@ -215,13 +228,16 @@ void drawFace(faceExpressions expression) {
     tft.fillEllipse(SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2 + 40, 15, 15, TFT_WHITE);
     tft.fillEllipse(SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2 + 40, 10, 10, TFT_BLACK);
   } else if (expression == HURT) {
+
     // spiral
     drawSpiral();
 
     // left
     tft.fillRect(SCREEN_WIDTH / 2 - 100, SCREEN_HEIGHT / 2 - 20, 80, 2, TFT_WHITE);
     tft.drawArc(SCREEN_WIDTH / 2 - 60, SCREEN_HEIGHT / 2 - 20, 40, 40, 270, 90, TFT_WHITE, TFT_WHITE);
-    tft.drawArc(SCREEN_WIDTH / 2 - 60, SCREEN_HEIGHT / 2 - 20, 25, 10, 270, 90, TFT_WHITE, TFT_WHITE);  // pupil
+
+    // draw both pupils
+    drawPupils(270, 90);
 
     tft.fillRect(SCREEN_WIDTH / 2 + 20, SCREEN_HEIGHT / 2 - 20, 80, 2, TFT_WHITE);  // right
 
@@ -245,6 +261,7 @@ void drawFace(faceExpressions expression) {
     tft.drawArc(SCREEN_WIDTH / 2 + 60, SCREEN_HEIGHT / 2 - 20, 40, 40, 300, 130, TFT_WHITE, TFT_WHITE);
     tft.drawArc(SCREEN_WIDTH / 2 + 60, SCREEN_HEIGHT / 2 - 20, 25, 10, 300, 130, TFT_WHITE, TFT_WHITE);  // pupil
 
+    drawPupils(230,60,300,130);
     // right eye
     tft.drawLine(SCREEN_WIDTH / 2 + 90, SCREEN_HEIGHT / 2, SCREEN_WIDTH / 2 + 30, SCREEN_HEIGHT / 2 - 45, TFT_WHITE);
     tft.drawArc(SCREEN_WIDTH / 2 - 60, SCREEN_HEIGHT / 2 - 20, 40, 40, 230, 60, TFT_WHITE, TFT_WHITE);
@@ -329,6 +346,7 @@ void setup() {
 
   // init variables
   tick = 0;
+  pupilRadius = 25;
 
   // connecting to network
   // WiFi.begin(ssid, password);
@@ -350,9 +368,7 @@ void loop() {
   Serial.print("y values:");
   Serial.println(incomingReadings.y);
 
-
   tft.fillScreen(TFT_BLACK);
-
 
   if (incomingReadings.z > 6) {
     state = EEPY;
@@ -373,7 +389,7 @@ void loop() {
     Serial.print("Received: ");
     receivedData.toCharArray(receivedDataString, sizeof(receivedDataString));
     Serial.println(receivedData);
-    jokeTopic=strtok(receivedDataString, ":");
+    jokeTopic = strtok(receivedDataString, ":");
     if (jokeTopic == "dad joke") {
       state = POKER;
     } else {
