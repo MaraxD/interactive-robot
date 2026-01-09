@@ -66,6 +66,8 @@ enum faceExpressions {
   EEPY
 };
 faceExpressions state;
+String incomingFaceState;
+
 
 // Callback when data is received
 void OnDataRecv(const uint8_t* mac, const uint8_t* incomingData, int len) {
@@ -85,6 +87,28 @@ void readMacAddress() {
   } else {
     Serial.println("Failed to read MAC address");
   }
+}
+
+String onFaceStateRecv() {
+  if (Serial.available() > 0) {
+    incomingFaceState = Serial.readStringUntil('\n');
+    Serial.print("Received state: ");
+    Serial.println(incomingFaceState);
+  } else {
+    Serial.println("No message written on serial");
+    incomingFaceState = "";
+  }
+
+  return incomingFaceState;
+}
+
+faceExpressions stringToExpression(String input) {
+  input.trim();
+
+  if (input.equalsIgnoreCase("EEPY")) return EEPY;
+  if (input.equalsIgnoreCase("NEUTRAL")) return NEUTRAL;
+  if (input.equalsIgnoreCase("DISTRESS")) return DISTRESS;
+  if (input.equalsIgnoreCase("HURT")) return HURT;
 }
 
 void drawSpiral() {
@@ -261,7 +285,7 @@ void drawFace(faceExpressions expression) {
     tft.drawArc(SCREEN_WIDTH / 2 + 60, SCREEN_HEIGHT / 2 - 20, 40, 40, 300, 130, TFT_WHITE, TFT_WHITE);
     tft.drawArc(SCREEN_WIDTH / 2 + 60, SCREEN_HEIGHT / 2 - 20, 25, 10, 300, 130, TFT_WHITE, TFT_WHITE);  // pupil
 
-    drawPupils(230,60,300,130);
+    drawPupils(230, 60, 300, 130);
     // right eye
     tft.drawLine(SCREEN_WIDTH / 2 + 90, SCREEN_HEIGHT / 2, SCREEN_WIDTH / 2 + 30, SCREEN_HEIGHT / 2 - 45, TFT_WHITE);
     tft.drawArc(SCREEN_WIDTH / 2 - 60, SCREEN_HEIGHT / 2 - 20, 40, 40, 230, 60, TFT_WHITE, TFT_WHITE);
@@ -363,38 +387,45 @@ void setup() {
 
 void loop() {
   Serial.print("x values:");
-  Serial.println(incomingReadings.x);
+  Serial.print(incomingReadings.x);
 
-  Serial.print("y values:");
+  Serial.print(" y values:");
   Serial.println(incomingReadings.y);
 
   tft.fillScreen(TFT_BLACK);
 
-  if (incomingReadings.z > 6) {
-    state = EEPY;
+  incomingFaceState = onFaceStateRecv();
+  
+  if (incomingFaceState != "") {
+    //dont use sensor data
+    state = stringToExpression(incomingFaceState);
   } else {
-    state = NEUTRAL;
-    tick++;  // for the animation
-  }
-
-  if (abs(incomingReadings.y) > 8) {
-    state = HURT;
-  } else if (int(analogRead(LDR_PIN) > 300)) {
-    state = DISTRESS;
-  }
-
-  // for the poker face
-  if (Serial.available()) {
-    String receivedData = Serial.readStringUntil('\n');  // read until newline
-    Serial.print("Received: ");
-    receivedData.toCharArray(receivedDataString, sizeof(receivedDataString));
-    Serial.println(receivedData);
-    jokeTopic = strtok(receivedDataString, ":");
-    if (jokeTopic == "dad joke") {
-      state = POKER;
+    if (incomingReadings.z > 6) {
+      state = EEPY;
     } else {
-      state = ANGRY;
+      state = NEUTRAL;
+      tick++;  // for the animation
     }
+
+    if (abs(incomingReadings.y) > 10) {
+      state = HURT;
+    } else if (int(analogRead(LDR_PIN) > 300)) {
+      state = DISTRESS;
+    }
+
+    // for the poker face
+    // if (Serial.available()) {
+    //   String receivedData = Serial.readStringUntil('\n');  // read until newline
+    //   Serial.print("Received: ");
+    //   receivedData.toCharArray(receivedDataString, sizeof(receivedDataString));
+    //   Serial.println(receivedData);
+    //   jokeTopic = strtok(receivedDataString, ":");
+    //   if (jokeTopic == "dad joke") {
+    //     state = POKER;
+    //   } else {
+    //     state = ANGRY;
+    //   }
+    // }
   }
 
   drawFace(state);
