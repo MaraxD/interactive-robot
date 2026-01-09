@@ -1,4 +1,5 @@
 # Interactive Robot
+![IMG_2646](https://github.com/user-attachments/assets/a9731166-6473-4f65-b40a-b8d4cbbfbcc2)
 
 ## Materials used
 <ul>
