@@ -95,7 +95,6 @@ String onFaceStateRecv() {
     Serial.print("Received state: ");
     Serial.println(incomingFaceState);
   } else {
-    Serial.println("No message written on serial");
     incomingFaceState = "";
   }
 
@@ -109,6 +108,13 @@ faceExpressions stringToExpression(String input) {
   if (input.equalsIgnoreCase("NEUTRAL")) return NEUTRAL;
   if (input.equalsIgnoreCase("DISTRESS")) return DISTRESS;
   if (input.equalsIgnoreCase("HURT")) return HURT;
+}
+
+String expressionToString(faceExpressions input){
+  if (input==EEPY) return "EEPY";
+  if (input==NEUTRAL) return "NEUTRAL";
+  if (input==DISTRESS) return "DISTRESS";
+  if (input==HURT) return "HURT";
 }
 
 void drawSpiral() {
@@ -386,11 +392,11 @@ void setup() {
 
 
 void loop() {
-  Serial.print("x values:");
-  Serial.print(incomingReadings.x);
+  // Serial.print("x values:");
+  // Serial.print(incomingReadings.x);
 
-  Serial.print(" y values:");
-  Serial.println(incomingReadings.y);
+  // Serial.print(" y values:");
+  // Serial.println(incomingReadings.y);
 
   tft.fillScreen(TFT_BLACK);
 
@@ -412,6 +418,8 @@ void loop() {
     } else if (int(analogRead(LDR_PIN) > 300)) {
       state = DISTRESS;
     }
+
+    Serial.println(expressionToString(state));
 
     // for the poker face
     // if (Serial.available()) {
